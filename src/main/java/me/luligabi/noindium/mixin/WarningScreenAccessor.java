@@ -1,16 +1,15 @@
 package me.luligabi.noindium.mixin;
 
-import net.minecraft.client.font.MultilineText;
-import net.minecraft.client.gui.screen.WarningScreen;
+import net.minecraft.client.gui.components.MultiLineLabel;
+import net.minecraft.client.gui.screens.multiplayer.WarningScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(WarningScreen.class)
 public interface WarningScreenAccessor {
+	@Accessor
+	MultiLineLabel getMessage();
 
-    @Accessor
-    MultilineText getMessageText();
-
-    @Accessor("messageText")
-     void setMessageText(MultilineText messageText);
+	@Accessor
+	void setMessage(MultiLineLabel messageText);
 }

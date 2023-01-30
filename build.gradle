@@ -2,19 +2,13 @@ buildscript {
     repositories {
         mavenCentral()
     }
-    dependencies {
-        classpath("com.guardsquare:proguard-gradle:${project.proguard_version}") {
-            exclude(group: "com.android.tools.build")
-        }
-    }
 }
 
 plugins {
-    id 'fabric-loom' version '0.12-SNAPSHOT'
+    id 'fabric-loom' version '1.1-SNAPSHOT'
     id 'maven-publish'
     id "com.matthewprenger.cursegradle" version '1.4.0'
     id "com.modrinth.minotaur" version '1.2.1'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 version = project.mod_version
@@ -27,23 +21,23 @@ def RELEASE_FILE = "${buildDir}/libs/${archivesBaseName}-${version}.jar"
 
 @SuppressWarnings('GrMethodMayBeStatic')
 def getChangeLog() {
-    return ""
+    return """1.1.0+1.18.2:
+- Removed Progaurd and Shadow from buildscript.
+- Removed Omega Config dependency.
+- Migrated to official Mojang mappings"""
 }
 
-repositories {
-    maven { url "https://maven.shedaniel.me/" }
-    maven { url "https://jitpack.io" }
-}
+System.out.println(getChangeLog())
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    mappings loom.officialMojangMappings() // Avoid having to manually change mappings version at all
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    modImplementation "com.github.Draylar.omega-config:omega-config-base:${project.omega_config_version}"
-    include "com.github.Draylar.omega-config:omega-config-base:${project.omega_config_version}"
+    // For simple JSON5 config
+    implementation include("blue.endless:jankson:${project.jankson_version}")
 }
 
 processResources {
@@ -57,14 +51,8 @@ processResources {
 
 def targetJavaVersion = 17
 tasks.withType(JavaCompile).configureEach {
-    // ensure that the encoding is set to UTF-8, no matter what the system default is
-    // this fixes some edge cases with special characters not displaying correctly
-    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-    // If Javadoc is generated, this must be specified in that task too.
-    it.options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        it.options.release = targetJavaVersion
-    }
+    // Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
+    it.options.release.set 17
 }
 
 java {
@@ -83,41 +71,6 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}" }
     }
-}
-
-shadowJar {
-    archiveClassifier.set("shadowed")
-    configurations = [project.configurations.shadow]
-}
-
-//noinspection UnnecessaryQualifiedReference
-task proguardJar(type: proguard.gradle.ProGuardTask, dependsOn: shadowJar) {
-
-    Map<String, String> MODULE_INFO_CLASS_FILTER = new HashMap<String, String>(1) {{ put("filter", "!module-info.class") }}
-
-    // NOTE: The "code/allocation/variable" optimisation (see: https://www.guardsquare.com/manual/configuration/optimizations) breaks remapJar.
-    configuration("proguard-rules.pro")
-
-    libraryjars(
-            new HashMap<String, String>(2) {{
-                putAll(MODULE_INFO_CLASS_FILTER)
-                put("jarfilter", "!**.jar")
-            }},
-            fileTree("${System.getenv("JAVA_HOME")}/jmods").matching { include("java.base.jmod") }.getSingleFile()
-    )
-    libraryjars(MODULE_INFO_CLASS_FILTER, project.configurations.runtimeClasspath )
-
-    File shadowedJar = shadowJar.archiveFile.get().asFile
-    injars(shadowedJar)
-    outjars("${buildDir}/tmp/${shadowedJar.getName()}")
-}
-
-prepareRemapJar {
-    dependsOn(proguardJar)
-}
-
-remapJar {
-    inputFile.set(proguardJar.outJarFileCollection.singleFile)
 }
 
 curseforge {
@@ -153,23 +106,24 @@ curseforge {
 import com.modrinth.minotaur.TaskModrinthUpload
 import com.modrinth.minotaur.request.VersionType
 
-task modrinth(type: TaskModrinthUpload, dependsOn: remapJar, group: "upload") {
-    onlyIf {
-        ENV.MODRINTH_TOKEN
-    }
-    token = ENV.MODRINTH_TOKEN
+tasks.register('modrinth', TaskModrinthUpload) {
+	dependsOn remapJar
+	onlyIf {
+		ENV.MODRINTH_TOKEN
+	}
+	token = ENV.MODRINTH_TOKEN
 
-    projectId = project.modrinth_id
-    changelog = getChangeLog()
+	projectId = project.modrinth_id
+	changelog = getChangeLog()
 
-    versionNumber = version
-    versionName = RELEASE_NAME
-    versionType = VersionType.valueOf("RELEASE")
+	versionNumber = version
+	versionName = RELEASE_NAME
+	versionType = VersionType.valueOf("RELEASE")
 
-    uploadFile = file(RELEASE_FILE)
+	uploadFile = file(RELEASE_FILE)
 
-    addGameVersion(project.minecraft_version as String)
-    addLoader("fabric")
+	addGameVersion(project.minecraft_version as String)
+	addLoader("fabric")
 }
 
 // configure the maven publication
