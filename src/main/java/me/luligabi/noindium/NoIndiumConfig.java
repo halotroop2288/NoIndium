@@ -7,10 +7,12 @@ import blue.endless.jankson.api.SyntaxError;
 import net.fabricmc.loader.api.FabricLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
 
 public class NoIndiumConfig {
 	private static final Jankson jankson = Jankson.builder().build();
@@ -18,11 +20,8 @@ public class NoIndiumConfig {
 	private static final File config_file = new File(config_directory, "noindium.json5");
 	private static final Logger logger = LogManager.getLogger(NoIndiumConfig.class);
 
-	@Comment(value = "Whether the 'missing indium' screen can show up. This config value is set to false if the user uses the checkbox.")
-	public boolean showIndiumScreen = true;
-
-	@Comment(value = "Whether the 'remove optifabric' screen can show up. This config value is set to false if the user uses the checkbox.")
-	public boolean showOptifabricScreen = true;
+	@NotNull
+	public final HashMap<@NotNull String, @NotNull Boolean> show = new HashMap<>();
 
 	@Comment(value = "Allow the user to proceed to the Title Screen even if one of the screens shows up. Setting this to false also removes the checkbox.")
 	public boolean allowToProceed = true;

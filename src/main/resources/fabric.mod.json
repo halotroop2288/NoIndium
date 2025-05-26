@@ -29,9 +29,8 @@
     "noindium.mixins.json"
   ],
   "depends": {
-    "fabricloader": "*",
-    "fabric": "*",
-    "minecraft": ">=1.18.2"
+    "fabric-lifecycle-events-v1": "*",
+    "minecraft": "1.18.2"
   },
   "suggests": {
     "sodium": "*",
